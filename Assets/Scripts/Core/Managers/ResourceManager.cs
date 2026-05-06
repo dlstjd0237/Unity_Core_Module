@@ -5,7 +5,7 @@ using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using Object = UnityEngine.Object;
 
-public class ResourceManager : MonoSingleton<ResourceManager>
+public class ResourceManager : IManager
 {
     private const string SpriteSubAssetTag = ".sprite";
 
@@ -34,6 +34,10 @@ public class ResourceManager : MonoSingleton<ResourceManager>
         return resource != null;
     }
 
+    public GameObject Instantiate(string key) =>
+        Instantiate(key, Vector3.zero, Quaternion.identity, null);
+    public GameObject Instantiate(string key, Transform parent) =>
+        Instantiate(key, Vector3.zero, Quaternion.identity, parent);
     public GameObject Instantiate(string key, Vector3 position) =>
         Instantiate(key, position, Quaternion.identity, null);
 
@@ -45,7 +49,7 @@ public class ResourceManager : MonoSingleton<ResourceManager>
         var prefab = Load<GameObject>(key);
         if (prefab == null)
         {
-            Stdout.LogError($"Can't find '{key}'", nameof(ResourceManager));
+            StdManager.LogError($"Can't find '{key}'", nameof(ResourceManager));
             return null;
         }
 
@@ -98,8 +102,8 @@ public class ResourceManager : MonoSingleton<ResourceManager>
             if (generation != _generation)
             {
                 Addressables.Release(handle);
-                foreach (var sub in subscribers)
-                    sub(null);
+                for (int i = 0; i < subscribers.Count; ++i)
+                    subscribers[i](null);
                 return;
             }
 
@@ -107,9 +111,9 @@ public class ResourceManager : MonoSingleton<ResourceManager>
 
             if (op.Status != AsyncOperationStatus.Succeeded)
             {
-                Stdout.LogError($"Failed to load '{key}': {op.OperationException?.Message}", nameof(ResourceManager));
-                foreach (var sub in subscribers)
-                    sub(null);
+                StdManager.LogError($"Failed to load '{key}': {op.OperationException?.Message}", nameof(ResourceManager));
+                for (int i = 0; i < subscribers.Count; ++i)
+                    subscribers[i](null);
                 return;
             }
 
@@ -129,7 +133,7 @@ public class ResourceManager : MonoSingleton<ResourceManager>
             {
                 if (op.Status != AsyncOperationStatus.Succeeded || op.Result == null)
                 {
-                    Stdout.LogError($"Failed to resolve label '{label}'", nameof(ResourceManager));
+                    StdManager.LogError($"Failed to resolve label '{label}'", nameof(ResourceManager));
                     onComplete?.Invoke();
                     return;
                 }
@@ -197,11 +201,7 @@ public class ResourceManager : MonoSingleton<ResourceManager>
         IsLoaded = false;
     }
 
-    protected override void OnDisable()
-    {
-        ReleaseAll();
-        base.OnDisable();
-    }
+
 
     private static string ResolveLoadKey(string key)
     {
@@ -210,5 +210,17 @@ public class ResourceManager : MonoSingleton<ResourceManager>
 
         string atlasName = key.Substring(0, key.Length - SpriteSubAssetTag.Length);
         return $"{key}[{atlasName}]";
+    }
+
+    public void Initialization()
+    {
+    }
+
+    public void OnEnable()
+    {
+    }
+    public void OnDisable()
+    {
+        ReleaseAll();
     }
 }

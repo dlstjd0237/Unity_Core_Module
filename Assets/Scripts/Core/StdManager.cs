@@ -2,7 +2,7 @@ using System;
 using System.Diagnostics;
 using UnityDebug = UnityEngine.Debug;
 
-public static class Stdout
+public static class StdManager
 {
     public enum LogLevel
     {
@@ -12,7 +12,6 @@ public static class Stdout
         Warning = 3,
         Error = 4,
         Fatal = 5,
-        None = 99,
     }
 
     public static LogLevel MinimumLevel { get; set; } = LogLevel.Info;
